@@ -22,6 +22,16 @@ import constants
 from werkzeug.security import check_password_hash, generate_password_hash
 import secrets
 
+from dotenv import load_dotenv, find_dotenv
+_ = load_dotenv(find_dotenv()) # read local .env file
+
+import warnings
+warnings.filterwarnings('ignore')
+
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.chains import LLMChain
+from langchain.chains import SimpleSequentialChain
 
 secret_key = secrets.token_hex(16)
 app = Flask(__name__)
@@ -311,6 +321,33 @@ def OSWENTRY_Low_Back_Pain_Questionaire_evaluation():
     score = model.score_OSWENTRY(request.form)
     disability = model.get_disability_level_from_score(score)
     return render_template('OSWENTRY_Results.html', score=score, disability=disability)
+
+
+#@app.route('/', methods=('GET', 'POST'))  # Route and accepted Methods
+@app.route('/resources', methods=('GET', 'POST'))
+def resources():
+    """
+
+    """
+    input = "knee pain"
+    #header_2 = gettext({input})
+
+    llm = ChatOpenAI(temperature=0.0)
+    first_prompt = ChatPromptTemplate.from_template(
+        "Offer links to external medical resources, such as reputable websites or articles, for users to learn more about{input} .\
+    Include trusted sources like medical journals, research papers, or established healthcare organizations."
+    )
+    chain_one = LLMChain(llm=llm, prompt=first_prompt)
+    second_prompt = ChatPromptTemplate.from_template(
+        "Extracts relevant information from {links} and help the person understand about their condition."
+    )
+    # chain 2
+    chain_two = LLMChain(llm=llm, prompt=second_prompt)
+    overall_simple_chain = SimpleSequentialChain(chains=[chain_one, chain_two], verbose=True)
+    #overall_simple_chain.run(input)
+
+    explanation = overall_simple_chain.run(input)
+    return render_template('resources.html', explanation=explanation)
 
 
 @app.route('/temp_placeholder', methods=('GET', 'POST'))
